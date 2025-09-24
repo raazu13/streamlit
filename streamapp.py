@@ -2,18 +2,47 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import os
+import subprocess
+import sys
 
-# --- 1. Load the pre-trained model and preprocessing objects ---
+# Define the model and scaler file names
+MODEL_FILE = 'random_forest_model.pkl'
+SCALER_FILE = 'scaler.pkl'
+FEATURES_FILE = 'feature_names.pkl'
+
+# --- 1. Training Logic ---
+def run_training_script():
+    """Runs the train_and_save_model.py script to generate model files."""
+    st.info("Model files not found. Running the training script to generate them...")
+    
+    # Use subprocess to run the training script
+    # The output is captured to be displayed in the Streamlit app
+    process = subprocess.run([sys.executable, 'train_and_save_model.py'], capture_output=True, text=True)
+    
+    if process.returncode == 0:
+        st.success("Training script executed successfully.")
+        st.code(process.stdout)
+    else:
+        st.error("Error during training script execution.")
+        st.code(process.stderr)
+        st.stop()
+        
+# Check if model files exist, if not, run the training script
+if not os.path.exists(MODEL_FILE) or not os.path.exists(SCALER_FILE) or not os.path.exists(FEATURES_FILE):
+    run_training_script()
+
+# --- 2. Load the pre-trained model and preprocessing objects ---
 @st.cache_resource
 def load_resources():
     try:
-        model = joblib.load('random_forest_model.pkl')
-        scaler = joblib.load('scaler.pkl')
-        feature_names = joblib.load('feature_names.pkl')
+        model = joblib.load(MODEL_FILE)
+        scaler = joblib.load(SCALER_FILE)
+        feature_names = joblib.load(FEATURES_FILE)
         return model, scaler, feature_names
     except FileNotFoundError:
-        st.error("Error: Model or scaler files not found.")
-        st.error("Please run the 'train_and_save_model.py' script first to generate the necessary files.")
+        st.error("Error: Model or scaler files not found even after training.")
+        st.error("This is an unexpected error. Please check your file paths.")
         return None, None, None
 
 model, scaler, feature_names = load_resources()
@@ -23,7 +52,7 @@ if model is None or scaler is None or feature_names is None:
     st.stop()
 
 
-# --- 2. Set up the Streamlit page layout and title ---
+# --- 3. Set up the Streamlit page layout and title ---
 st.set_page_config(layout="wide")
 
 # Main content
@@ -34,7 +63,7 @@ st.markdown("""
 """)
 
 
-# --- 3. User Input ---
+# --- 4. User Input ---
 st.header('Enter Exoplanet Candidate Data')
 st.markdown("Please input the following physical parameters:")
 
@@ -54,7 +83,7 @@ with col3:
 submitted = st.button("Predict")
 
 
-# --- 4. Prediction logic and results display ---
+# --- 5. Prediction logic and results display ---
 if submitted:
     st.subheader("Prediction Result")
 
